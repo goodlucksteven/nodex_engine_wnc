@@ -1,0 +1,45 @@
+name: Frontend CI
+
+on:
+  pull_request:
+    paths:
+      - "frontend/**"
+      - "render.yaml"
+      - ".github/workflows/frontend-ci.yml"
+  push:
+    branches:
+      - main
+      - feat/sable-engine-integration
+    paths:
+      - "frontend/**"
+      - "render.yaml"
+      - ".github/workflows/frontend-ci.yml"
+
+jobs:
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Install dependencies
+        run: set -o pipefail; npm ci 2>&1 | tee ci-npm-ci.log
+      - name: Typecheck
+        run: set -o pipefail; npm run typecheck 2>&1 | tee ci-typecheck.log
+      - name: Build frontend
+        run: set -o pipefail; npm run build 2>&1 | tee ci-build.log
+      - name: Upload frontend diagnostic logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-ci-logs-${{ github.run_id }}
+          path: frontend/ci-*.log
+          if-no-files-found: warn
+          retention-days: 14

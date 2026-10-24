@@ -1,0 +1,27 @@
+name: Rust CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Cargo check
+        shell: bash
+        run: set -o pipefail; cargo check 2>&1 | tee ci-cargo-check.log
+      - name: Run Rust tests
+        shell: bash
+        run: set -o pipefail; cargo test --all-targets 2>&1 | tee ci-cargo-test.log
+      - name: Upload Rust diagnostic logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rust-ci-logs-${{ github.run_id }}
+          path: ci-cargo-*.log
+          if-no-files-found: warn
+          retention-days: 14
